@@ -52,7 +52,7 @@
  <select id="productSelect" style="width:100%;padding:10px;margin:5px 0 10px;border:1px solid #cbd5e1;border-radius:7px"></select>
  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">
   <input id="productName" placeholder="Tên / mã sản phẩm">
-  <input id="productCategory" placeholder="Danh mục, ví dụ 60×120">
+  <input id="productCategory" list="productCategoryOptions" placeholder="Chọn danh mục hoặc nhập danh mục mới"><datalist id="productCategoryOptions"></datalist>
   <input id="productImage" placeholder="Dán URL ảnh Cloudinary tại đây">
  </div>
  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
@@ -190,7 +190,18 @@ async function loadAdminProducts(){
  productSelect.replaceChildren();
  const opt=document.createElement('option');opt.value='';opt.textContent='— Chọn sản phẩm —';productSelect.appendChild(opt);
  productRecords.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=(x.archived?'[HẾT HÀNG] ':'')+(x.name||x.id);productSelect.appendChild(o);});
+ refreshProductCategoryOptions();
  productStatus.textContent=`Đã tải ${productRecords.length} sản phẩm để quản lý (338 sản phẩm gốc và sản phẩm bổ sung).`;
+}
+function refreshProductCategoryOptions(){
+ const list=$('productCategoryOptions');
+ if(!list)return;
+ const values=[...new Set([
+  ...(window.__baseProducts||[]).map(x=>x.cat),
+  ...(productRecords||[]).map(x=>x.cat)
+ ].map(x=>String(x||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+ list.replaceChildren();
+ values.forEach(value=>{const option=document.createElement('option');option.value=value;list.appendChild(option);});
 }
 function fillProductForm(id){
  const x=productRecords.find(r=>r.id===id);
