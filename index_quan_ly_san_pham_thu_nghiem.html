@@ -196,7 +196,7 @@ $('newProductBtn').addEventListener('click',()=>{productSelect.value='';fillProd
 $('saveProductBtn').addEventListener('click',async()=>{
  const name=$('productName').value.trim(),cat=$('productCategory').value.trim(),src=$('productImage').value.trim(),id=productSelect.value;
  if(!name||!cat||!src){productStatus.textContent='Cần nhập đủ tên, danh mục và URL ảnh.';return;}
- if(!/^https:\\/\\//i.test(src)&&!src.startsWith('data:image/')){productStatus.textContent='URL ảnh phải bắt đầu bằng https://';return;}
+ if(!/^https:\/\//i.test(src)&&!src.startsWith('data:image/')){productStatus.textContent='URL ảnh phải bắt đầu bằng https://';return;}
  try{
   const old=productRecords.find(x=>x.id===id);
   const docId=id||(old?.id)||('new-'+Date.now());
