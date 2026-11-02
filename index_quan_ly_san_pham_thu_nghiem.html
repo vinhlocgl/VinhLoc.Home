@@ -57,8 +57,7 @@
  </div>
  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
   <button id="saveProductBtn" type="button">LƯU SẢN PHẨM</button>
-  <button id="archiveProductBtn" type="button" style="background:#9a5b16;border-color:#9a5b16">CHUYỂN VÀO HẾT HÀNG</button>
-  <button id="restoreProductBtn" type="button" style="background:#18794e;border-color:#18794e">KHÔI PHỤC</button>
+  <button id="deleteProductBtn" type="button" style="background:#b42318;border-color:#b42318">XÓA SẢN PHẨM</button>
  </div>
  <div id="productAdminStatus" role="status" style="margin-top:9px;font-size:13px;color:#344054">Chưa tải danh sách sản phẩm.</div>
  <div style="font-size:12px;color:#667085;margin-top:6px">Ảnh hiện tại trong 338 sản phẩm vẫn được giữ nguyên. Ảnh mới dùng URL HTTPS từ Cloudinary; không tải ảnh trực tiếp lên GitHub.</div>
@@ -119,7 +118,7 @@ renderCards();filter();</script><script id="dailyUpdaterLibrary" src="https://cd
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, collection, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, collection, setDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 const firebaseConfig = {
   apiKey: "AIzaSyA-xGvy3Eh0S3wnoOUc0yn-W8lTjgzrhac",
   authDomain: "vinh-loc-home.firebaseapp.com",
@@ -206,7 +205,7 @@ function refreshProductCategoryOptions(){
 function fillProductForm(id){
  const x=productRecords.find(r=>r.id===id);
  $('productName').value=x?.name||'';$('productCategory').value=x?.cat||'';$('productImage').value=x?.src||'';
- $('archiveProductBtn').hidden=!x;$('restoreProductBtn').hidden=!(x&&x.archived);
+ $('deleteProductBtn').hidden=!x;
 }
 productSelect.addEventListener('change',()=>fillProductForm(productSelect.value));
 $('newProductBtn').addEventListener('click',()=>{productSelect.value='';fillProductForm('');$('productName').focus();});
@@ -223,13 +222,25 @@ $('saveProductBtn').addEventListener('click',async()=>{
   productStatus.textContent='Đã lưu sản phẩm.';await loadAdminProducts();productSelect.value=docId;fillProductForm(docId);
  }catch(e){productStatus.textContent='Không lưu được: '+e.message;}
 });
-async function setProductArchived(flag){
- const id=productSelect.value;if(!id){productStatus.textContent='Chọn sản phẩm trước.';return;}
- try{await setDoc(doc(db,'products',id),{archived:flag,updatedAt:serverTimestamp()},{merge:true});productStatus.textContent=flag?'Đã chuyển vào Hết hàng.':'Đã khôi phục sản phẩm.';await loadAdminProducts();productSelect.value=id;fillProductForm(id);}
- catch(e){productStatus.textContent='Không cập nhật được: '+e.message;}
+async function deleteSelectedProduct(){
+ const id=productSelect.value;
+ if(!id){productStatus.textContent='Chọn sản phẩm cần xóa trước.';return;}
+ const item=productRecords.find(x=>x.id===id);
+ if(!item){productStatus.textContent='Không tìm thấy sản phẩm.';return;}
+ const isNew=id.startsWith('new-');
+ const promptText=isNew
+  ? `Xóa vĩnh viễn sản phẩm thử nghiệm “${item.name}”?`
+  : `Xóa phần chỉnh sửa của “${item.name}” và khôi phục dữ liệu gốc?`;
+ if(!confirm(promptText))return;
+ try{
+  // Sản phẩm mới (new-*) sẽ bị xóa khỏi Firestore; sản phẩm gốc chỉ xóa bản ghi ghi đè để khôi phục dữ liệu gốc.
+  await deleteDoc(doc(db,'products',id));
+  productStatus.textContent=isNew?'Đã xóa sản phẩm thử nghiệm.':'Đã khôi phục dữ liệu gốc của sản phẩm.';
+  $('productName').value='';$('productCategory').value='';$('productImage').value='';
+  await loadAdminProducts();productSelect.value='';fillProductForm('');
+ }catch(e){productStatus.textContent='Không xóa được: '+e.message;}
 }
-$('archiveProductBtn').addEventListener('click',()=>setProductArchived(true));
-$('restoreProductBtn').addEventListener('click',()=>setProductArchived(false));
+$('deleteProductBtn').addEventListener('click',deleteSelectedProduct);
 function normalizeUsername(v){return String(v||'').trim().toUpperCase().replace(/[^A-Z0-9._-]/g,'');}
 function usernameFromUser(user){return user?.email?.toLowerCase().endsWith(USER_DOMAIN)?user.email.slice(0,-USER_DOMAIN.length).toUpperCase():'';}
 async function loadEmployees(){
