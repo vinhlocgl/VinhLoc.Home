@@ -145,6 +145,15 @@ async function loadInventory(){
  const tiles=tilesSnap.exists()&&Array.isArray(tilesSnap.data().items)?tilesSnap.data().items:[];
  const roof=roofSnap.exists()&&Array.isArray(roofSnap.data().items)?roofSnap.data().items:[];
  publishInventory({tiles,roof});
+ const fmt=snap=>{
+  if(!snap.exists())return 'Chưa có dữ liệu được cập nhật.';
+  const d=snap.data(), when=d.updatedAt?.toDate?d.updatedAt.toDate().toLocaleString('vi-VN'):'Chưa rõ thời gian';
+  const file=d.sourceFile||'Không lưu tên file';
+  const who=d.updatedBy||'Không rõ tài khoản';
+  return `File gần nhất: <b>${String(file).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]))}</b> · Người cập nhật: ${String(who).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]))}`;
+ };
+ $('tilesStatus').innerHTML=fmt(tilesSnap);
+ $('roofStatus').innerHTML=fmt(roofSnap);
  const dates=[]; for(const snap of [tilesSnap,roofSnap]) if(snap.exists()&&snap.data().updatedAt?.toDate) dates.push(snap.data().updatedAt.toDate().toLocaleString('vi-VN'));
  loginStatus.textContent=`Đã tải tồn kho: ${tiles.length} dòng gạch · ${roof.length} dòng ngói`+(dates.length?' · Cập nhật gần nhất: '+dates.sort().at(-1):'')+'.';
 }
