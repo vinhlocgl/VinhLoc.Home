@@ -59,6 +59,7 @@
  </div>
  <label style="display:block;font-size:13px;font-weight:700">Chọn sản phẩm cần sửa / khôi phục</label>
  <input id="productSearchInput" type="search" placeholder="Tìm theo tên hoặc mã sản phẩm..." autocomplete="off" style="width:100%;padding:10px;margin:5px 0;border:1px solid #cbd5e1;border-radius:7px">
+ <div id="productSearchStatus" style="font-size:12px;color:#52616b;margin:0 0 5px;min-height:16px">Nhập từ khóa để lọc danh sách sản phẩm.</div>
  <select id="productSelect" style="width:100%;padding:10px;margin:0 0 10px;border:1px solid #cbd5e1;border-radius:7px"><option value="">— Chọn sản phẩm —</option></select>
  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">
   <input id="productName" placeholder="Tên / mã sản phẩm">
@@ -452,13 +453,15 @@ $('downloadHtmlBackupBtn').addEventListener('click',()=>{
 function renderProductAdminOptions(){
  const search=$('productSearchInput');
  const query=(search?.value||'').trim().toLocaleLowerCase('vi');
- const normalizeText=v=>String(v||'').toLocaleLowerCase('vi').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/đ/g,'d');
+ const normalizeText=v=>String(v||'').toLocaleLowerCase('vi').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
  const q=normalizeText(query),current=productSelect.value;
  productSelect.replaceChildren();
  const first=document.createElement('option');first.value='';first.textContent=q?'— Chọn trong kết quả tìm kiếm —':'— Chọn sản phẩm —';productSelect.appendChild(first);
  const filtered=productAdminOptions.filter(x=>!q||normalizeText(x.label).includes(q));
  filtered.forEach(x=>{const op=document.createElement('option');op.value=x.id;op.textContent=x.label;productSelect.appendChild(op);});
  if(current&&filtered.some(x=>x.id===current))productSelect.value=current;
+ const status=$('productSearchStatus');
+ if(status)status.textContent=q?(filtered.length?`Tìm thấy ${filtered.length} sản phẩm. Chọn sản phẩm trong danh sách bên dưới.`:'Không tìm thấy sản phẩm phù hợp. Thử từ khóa khác.'):`Có ${productAdminOptions.length} sản phẩm. Nhập tên hoặc mã để lọc nhanh.`;
  if(search)search.setAttribute('aria-label',`Tìm sản phẩm; có ${filtered.length} kết quả`);
 }
 $('productSearchInput').addEventListener('input',()=>{renderProductAdminOptions();});
