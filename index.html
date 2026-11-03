@@ -58,7 +58,8 @@
   <button id="newProductBtn" type="button">THÊM SẢN PHẨM</button>
  </div>
  <label style="display:block;font-size:13px;font-weight:700">Chọn sản phẩm cần sửa / khôi phục</label>
- <select id="productSelect" style="width:100%;padding:10px;margin:5px 0 10px;border:1px solid #cbd5e1;border-radius:7px"><option value="">— Chọn sản phẩm —</option></select>
+ <input id="productSearchInput" type="search" placeholder="Tìm theo tên hoặc mã sản phẩm..." autocomplete="off" style="width:100%;padding:10px;margin:5px 0;border:1px solid #cbd5e1;border-radius:7px">
+ <select id="productSelect" style="width:100%;padding:10px;margin:0 0 10px;border:1px solid #cbd5e1;border-radius:7px"><option value="">— Chọn sản phẩm —</option></select>
  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">
   <input id="productName" placeholder="Tên / mã sản phẩm">
   <select id="productCategorySelect" aria-label="Chọn danh mục"><option value="">— Chọn danh mục có sẵn —</option></select>
@@ -270,6 +271,7 @@ const uploadPanel=$('uploadPanel'), signedInBar=$('signedInBar'), signedInEmail=
 const employeePanel=$('employeeAdminPanel'), employeeRows=$('employeeRows'), employeeStatus=$('employeeStatus');
 const productPanel=$('productAdminPanel'), productSelect=$('productSelect'), productStatus=$('productAdminStatus');
 let productDocs=[];
+let productAdminOptions=[];
 const USER_DOMAIN='@vinhloc-home.com';
 function publishInventory(groups){ window.dispatchEvent(new CustomEvent('firebase-inventory-loaded',{detail:{tiles:groups.tiles||[],roof:groups.roof||[]}})); }
 async function loadInventory(){
@@ -447,13 +449,27 @@ $('downloadHtmlBackupBtn').addEventListener('click',()=>{
  }catch(err){$('backupStatus').textContent='Không tạo được file HTML: '+err.message;}
  finally{btn.disabled=false;btn.textContent='TẢI BẢN SAO LƯU WEBSITE HTML';}
 });
+function renderProductAdminOptions(){
+ const search=$('productSearchInput');
+ const query=(search?.value||'').trim().toLocaleLowerCase('vi');
+ const normalizeText=v=>String(v||'').toLocaleLowerCase('vi').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/đ/g,'d');
+ const q=normalizeText(query),current=productSelect.value;
+ productSelect.replaceChildren();
+ const first=document.createElement('option');first.value='';first.textContent=q?'— Chọn trong kết quả tìm kiếm —':'— Chọn sản phẩm —';productSelect.appendChild(first);
+ const filtered=productAdminOptions.filter(x=>!q||normalizeText(x.label).includes(q));
+ filtered.forEach(x=>{const op=document.createElement('option');op.value=x.id;op.textContent=x.label;productSelect.appendChild(op);});
+ if(current&&filtered.some(x=>x.id===current))productSelect.value=current;
+ if(search)search.setAttribute('aria-label',`Tìm sản phẩm; có ${filtered.length} kết quả`);
+}
+$('productSearchInput').addEventListener('input',()=>{renderProductAdminOptions();});
 async function loadAdminProducts(){
  const snap=await getDocs(collection(db,'products'));
  productDocs=snap.docs.map(d=>({id:d.id,data:d.data()}));publishProductDocs();
  const base=Array.isArray(window.__baseProducts)?window.__baseProducts:[];
- productSelect.replaceChildren();const first=document.createElement('option');first.value='';first.textContent='— Chọn sản phẩm —';productSelect.appendChild(first);
- base.forEach((p,i)=>{const docId='item-'+(i+1),remote=productDocs.find(x=>x.id===docId),d=remote?.data||{};const op=document.createElement('option');op.value=docId;op.textContent=(d.archived?'[HẾT HÀNG] ':'')+(d.name||p.name);productSelect.appendChild(op);});
- productDocs.filter(x=>x.data.isNew).forEach(x=>{const op=document.createElement('option');op.value=x.id;op.textContent=(x.data.archived?'[HẾT HÀNG] ':'')+(x.data.name||x.id)+' · MỚI';productSelect.appendChild(op);});
+ productAdminOptions=[];
+ base.forEach((p,i)=>{const docId='item-'+(i+1),remote=productDocs.find(x=>x.id===docId),d=remote?.data||{};productAdminOptions.push({id:docId,label:(d.archived?'[HẾT HÀNG] ':'')+(d.name||p.name)});});
+ productDocs.filter(x=>x.data.isNew).forEach(x=>{productAdminOptions.push({id:x.id,label:(x.data.archived?'[HẾT HÀNG] ':'')+(x.data.name||x.id)+' · MỚI'});});
+ renderProductAdminOptions();
  const categorySelect=$('productCategorySelect');categorySelect.replaceChildren();const firstCat=document.createElement('option');firstCat.value='';firstCat.textContent='— Chọn danh mục có sẵn —';categorySelect.appendChild(firstCat);const cats=[...new Set(base.map(x=>x.cat).concat(productDocs.map(x=>x.data.cat)).filter(Boolean))].filter(x=>x!=='HẾT HÀNG').sort();cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;categorySelect.appendChild(o);});
  const renameSelect=$('renameCategorySelect');if(renameSelect){const selected=renameSelect.value;renameSelect.replaceChildren();const ph=document.createElement('option');ph.value='';ph.textContent='— Chọn danh mục cần đổi tên —';renameSelect.appendChild(ph);cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;renameSelect.appendChild(o);});if(cats.includes(selected))renameSelect.value=selected;}
  productStatus.textContent=`Đã tải ${base.length+productDocs.filter(x=>x.data.isNew).length} sản phẩm để quản lý (${base.length} sản phẩm gốc).`;
